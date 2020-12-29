@@ -14,7 +14,7 @@ $(function () {
     var maxX = canvas.width;
     var maxY = canvas.height;
 
-    ball = new Ball(10, "#ff0000", 20, startX, startY, ctx)
+    ball = new Ball(10, "#ff0000", 0.7, startX, startY, ctx)
 
     var requestAnimationFrame = window.requestAnimationFrame ||
         window.mozRequestAnimationFrame ||
@@ -41,14 +41,16 @@ $(function () {
         acc.innerHTML = "alpha = " + alpha + "<br>" + "beta = " + beta + "<br>" + "gamma = " + gamma;
         acc.innerHTML += "<br>" + "x = " + x + "<br>" + "y = " + y;
 
-        updateBall(ball, maxX * x / 180 - ball.radius, maxY * y / 180 - ball.radius, 0);
+        updateBall(ball, maxX * x / 180 - ball.radius, maxY * y / 180 - ball.radius);
     }
 
     function Ball(radius, color, weight, x, y, ctx) {
         this.baseRadius = radius;
         this.radius = radius;
         this.color = color;
-        this.weight = weight;
+        this.weight = weight; // (0, 1) !
+        if (weight > 1) { this.weight = 0.999 }
+        if (weight < 0) { this.weight = 0.001 }
         this.x = x;
         this.y = y;
         this.ctx = ctx;
@@ -62,9 +64,9 @@ $(function () {
         ball.ctx.closePath();
     }
 
-    function updateBall(ball, dx, dy, dz) {
-        newX = lerp(ball.x, ball.x + dx, 0.01);
-        newY = lerp(ball.y, ball.y + dy, 0.01);
+    function updateBall(ball, dx, dy) {
+        newX = lerp(ball.x, ball.x + dx, 1 - ball.weight);
+        newY = lerp(ball.y, ball.y + dy, 1 - ball.weight);
 
         if (newX > maxX - ball.radius) { newX = maxX - ball.radius }
         if (newX < ball.radius) { newX = ball.radius }
