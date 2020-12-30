@@ -14,7 +14,7 @@ $(function () {
     var maxX = canvas.width;
     var maxY = canvas.height;
 
-    ball = new Ball(10, "#ff0000", 0.7, startX, startY, ctx)
+    ball = new Ball(10, "#ff0000", 10, startX, startY, 0, 0, ctx)
 
     var requestAnimationFrame = window.requestAnimationFrame ||
         window.mozRequestAnimationFrame ||
@@ -24,35 +24,21 @@ $(function () {
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBall(ball);
-
-        var x = gamma;  // In degree in the range [-180,180)
-        var y = beta; // In degree in the range [-90,90)
-
-        // Because we don't want to have the device upside down
-        // We constrain the x value to the range [-90,90]
-        if (x > 90) { x = 90 };
-        if (x < -90) { x = -90 };
-
-        // To make computation easier we shift the range of
-        // x and y to [0,180]
-        // x += 90;
-        // y += 90;
-        acc = document.querySelector("#acc")
-        acc.innerHTML = "alpha = " + alpha + "<br>" + "beta = " + beta + "<br>" + "gamma = " + gamma;
-        acc.innerHTML += "<br>" + "x = " + x + "<br>" + "y = " + y;
-
-        updateBall(ball, maxX * x / 180 - ball.radius, maxY * y / 180 - ball.radius);
     }
 
-    function Ball(radius, color, weight, x, y, ctx) {
+    setInterval(() => {
+        requestAnimationFrame(draw)
+    }, 10);
+
+    function Ball(radius, color, weight, x, y, ax, ay, ctx) {
         this.baseRadius = radius;
         this.radius = radius;
         this.color = color;
-        this.weight = weight; // (0, 1) !
-        if (weight > 1) { this.weight = 0.999 }
-        if (weight < 0) { this.weight = 0.001 }
+        this.weight = weight;
         this.x = x;
         this.y = y;
+        this.ax = ax;
+        this.ay = ay;
         this.ctx = ctx;
     }
 
@@ -62,11 +48,12 @@ $(function () {
         ball.ctx.fillStyle = ball.color;
         ball.ctx.fill();
         ball.ctx.closePath();
+        updateBall(ball);
     }
 
-    function updateBall(ball, dx, dy) {
-        newX = lerp(ball.x, ball.x + dx, 1 - ball.weight);
-        newY = lerp(ball.y, ball.y + dy, 1 - ball.weight);
+    function updateBall(ball) {
+        newX = lerp(ball.x, ball.x + (maxX * ball.ax / ball.weight), 0.1);
+        newY = lerp(ball.y, ball.y + (maxY * ball.ay / ball.weight), 0.1);
 
         if (newX > maxX - ball.radius) { newX = maxX - ball.radius }
         if (newX < ball.radius) { newX = ball.radius }
@@ -92,11 +79,45 @@ $(function () {
     }
 
     function handleOrientation(event) {
-        alpha = event.alpha;
-        beta = event.beta;
-        gamma = event.gamma;
+        var originalAlpha = 0,
+            originalBeta = 0,
+            originalGamma = 0,
+            tolerance = 2;
 
-        requestAnimationFrame(draw)
+        if (Math.abs(event.alpha - originalAlpha) > tolerance) {
+            alpha = event.alpha;
+            originalAlpha = alpha;
+        }
+        if (Math.abs(event.beta - originalBeta) > tolerance) {
+            beta = event.beta;
+            originalBeta = beta;
+
+            var y = beta; // In degree in the range [-90,90)
+            y /= 180;
+            ball.ay = y;
+        } else {
+            ball.ay /= 10;
+        }
+        if (Math.abs(event.gamma - originalGamma) > tolerance) {
+            gamma = event.gamma;
+            originalGamma = gamma;
+
+            var x = gamma;  // In degree in the range [-180,180)
+
+            // Because we don't want to have the device upside down
+            // We constrain the x value to the range [-90,90]
+            if (x > 90) { x = 90 };
+            if (x < -90) { x = -90 };
+            x /= 180;
+            ball.ax = x;
+        } else {
+            ball.ax /= 10;
+        }
+
+        acc = document.querySelector("#acc")
+        acc.innerHTML = "alpha = " + alpha + "<br>" + "beta = " + beta + "<br>" + "gamma = " + gamma;
+        acc.innerHTML += "<br>" + "x = " + x + "<br>" + "y = " + y;
+        acc.innerHTML += "<br>" + "ballX = " + ball.ax + "<br>" + "ballY = " + ball.ay;
     }
 
     function setCanvas(canvasObject) {
